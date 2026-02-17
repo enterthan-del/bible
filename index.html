@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="성경암송">
+    <meta name="theme-color" content="#667eea">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>성경 암송 자료</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            background: #1a1a1a;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .presentation-container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .slide {
+            display: none;
+            width: 90vw;
+            max-width: 1200px;
+            height: 80vh;
+            border-radius: 20px;
+            padding: 60px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        
+        .slide.active {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .slide-number {
+            position: absolute;
+            top: 30px;
+            left: 40px;
+            font-size: 28px;
+            font-weight: bold;
+            opacity: 0.5;
+        }
+        
+        .reference {
+            font-size: 54px;
+            font-weight: bold;
+            margin-bottom: 50px;
+            text-align: center;
+            color: #ffffff;
+        }
+        
+        .verse-container {
+            text-align: center;
+            max-width: 900px;
+        }
+        
+        .verse-line {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+            margin: 8px 0;
+            line-height: 1.4;
+        }
+        
+        .verse-line.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* 힌트 슬라이드의 첫 글자 스타일 */
+        .hint-line {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+            margin: 8px 0;
+            line-height: 1.4;
+        }
+        
+        .hint-line.show {
+            opacity: 0.8;
+            transform: translateY(0);
+        }
+        
+        /* 암기 문장 스타일 */
+        .mnemonic-sentence {
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.6s ease;
+        }
+        
+        .mnemonic-sentence.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        /* 삽화 스타일 */
+        .illustration {
+            width: 150px;
+            height: 150px;
+            margin-bottom: 30px;
+            opacity: 0.85;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+        }
+        
+        /* 배경 색상 그룹 */
+        .bg-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .bg-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .bg-3 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .bg-4 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .bg-5 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        
+        /* 타이틀 슬라이드 */
+        .title-slide {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+        
+        .title-slide h1 {
+            font-size: 72px;
+            margin-bottom: 30px;
+            color: #ffffff;
+        }
+        
+        .title-slide p {
+            font-size: 36px;
+            color: rgba(255,255,255,0.8);
+        }
+        
+        /* 네비게이션 */
+        .nav-buttons {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 1000;
+        }
+        
+        .nav-button {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.5);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        
+        .nav-button:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+        
+        .nav-button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: rgba(255,255,255,0.8);
+            transition: width 0.3s;
+            z-index: 1000;
+        }
+        
+        .slide-counter {
+            position: fixed;
+            top: 20px;
+            right: 40px;
+            color: rgba(255,255,255,0.7);
+            font-size: 18px;
+            z-index: 1000;
+        }
+        
+        .instruction {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.6);
+            font-size: 14px;
+            text-align: center;
+            z-index: 1000;
+        }
+        
+        /* 모바일 최적화 */
+        @media (max-width: 768px) {
+            .slide {
+                width: 95vw;
+                height: 85vh;
+                padding: 30px 20px;
+            }
+            
+            .slide-number {
+                top: 15px;
+                left: 20px;
+                font-size: 20px;
+            }
+            
+            .reference {
+                font-size: 36px;
+                margin-bottom: 30px;
+            }
+            
+            .illustration {
+                width: 100px;
+                height: 100px;
+                margin-bottom: 20px;
+            }
+            
+            .slide-counter {
+                top: 15px;
+                right: 20px;
+                font-size: 16px;
+            }
+            
+            .nav-buttons {
+                bottom: 20px;
+                gap: 15px;
+            }
+            
+            .nav-button {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            
+            .instruction {
+                bottom: 80px;
+                font-size: 12px;
+                padding: 0 20px;
+            }
+        }
+        
+        /* 아주 작은 화면 */
+        @media (max-width: 480px) {
+            .slide {
+                padding: 20px 15px;
+            }
+            
+            .reference {
+                font-size: 28px;
+                margin-bottom: 20px;
+            }
+            
+            .illustration {
+                width: 80px;
+                height: 80px;
+                margin-bottom: 15px;
+            }
+            
+            .instruction {
+                display: none;
+            }
+        }
+        
+        /* 터치 제스처 지원 */
+        .slide {
+            touch-action: pan-y;
+        }
+        
+        /* iOS Safari 하단 바 대응 */
+        @supports (padding: max(0px)) {
+            body {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+            
+            .nav-buttons {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+    <div class="slide-counter" id="slideCounter">1 / 89</div>
+    
+    <div class="presentation-container" id="presentation">
+        <!-- 타이틀 슬라이드 -->
+        <div class="slide active title-slide">
+            <h1>성경 암송 자료</h1>
+            <p>44개 핵심 성경 구절</p>
+        </div>
+        
+        <!-- 슬라이드들이 JavaScript로 동적 생성됨 -->
+    </div>
+    
+    <div class="instruction">
+        클릭/스페이스바: 다음 줄 | 화살표 키: 슬라이드 이동 | 힌트 슬라이드 → 전체 본문 슬라이드
+    </div>
+    
+    <div class="nav-buttons">
+        <button class="nav-button" id="prevBtn" onclick="prevSlide()">◀ 이전</button>
+        <button class="nav-button" id="nextBtn" onclick="nextSlide()">다음 ▶</button>
+    </div>
+
+    <script>
+        // SVG 삽화 정의
+        const illustrations = {
+            creation: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="100" cy="100" r="80" fill="none" stroke="white" stroke-width="3"/>
+                <circle cx="100" cy="100" r="60" fill="none" stroke="white" stroke-width="2" opacity="0.6"/>
+                <circle cx="100" cy="100" r="40" fill="none" stroke="white" stroke-width="2" opacity="0.4"/>
+                <path d="M 100 20 L 100 180" stroke="white" stroke-width="2" opacity="0.5"/>
+                <path d="M 20 100 L 180 100" stroke="white" stroke-width="2" opacity="0.5"/>
+                <circle cx="100" cy="100" r="8" fill="white"/>
+                <path d="M 100 50 Q 120 70 100 90" fill="none" stroke="white" stroke-width="1.5" opacity="0.7"/>
+                <path d="M 100 110 Q 80 130 100 150" fill="none" stroke="white" stroke-width="1.5" opacity="0.7"/>
+            </svg>`,
+            
+            grace: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 80 120 Q 80 80 100 60 Q 120 80 120 120 L 120 140 Q 120 160 100 160 Q 80 160 80 140 Z" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 90 100 L 110 100 M 100 90 L 100 110" stroke="white" stroke-width="2"/>
+                <circle cx="70" cy="90" r="3" fill="white"/>
+                <circle cx="130" cy="90" r="3" fill="white"/>
+                <circle cx="60" cy="110" r="2" fill="white" opacity="0.7"/>
+                <circle cx="140" cy="110" r="2" fill="white" opacity="0.7"/>
+                <path d="M 100 40 L 100 60" stroke="white" stroke-width="2" opacity="0.6"/>
+                <path d="M 85 45 L 95 55" stroke="white" stroke-width="1.5" opacity="0.5"/>
+                <path d="M 115 45 L 105 55" stroke="white" stroke-width="1.5" opacity="0.5"/>
+            </svg>`,
+            
+            serpent: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 40 150 Q 60 130 80 140 Q 100 150 120 130 Q 140 110 160 120" fill="none" stroke="white" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="165" cy="118" r="6" fill="white"/>
+                <circle cx="162" cy="116" r="2" fill="#333"/>
+                <path d="M 100 80 L 100 150" stroke="white" stroke-width="3"/>
+                <path d="M 85 95 L 115 95" stroke="white" stroke-width="3"/>
+                <circle cx="100" cy="70" r="8" fill="white"/>
+                <path d="M 95 65 L 100 60 L 105 65" fill="none" stroke="#333" stroke-width="2"/>
+            </svg>`,
+            
+            cross: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <rect x="95" y="40" width="10" height="120" fill="white" rx="2"/>
+                <rect x="60" y="75" width="80" height="10" fill="white" rx="2"/>
+                <circle cx="90" cy="70" r="3" fill="white" opacity="0.7"/>
+                <circle cx="110" cy="70" r="3" fill="white" opacity="0.7"/>
+                <circle cx="90" cy="90" r="2" fill="white" opacity="0.5"/>
+                <circle cx="110" cy="90" r="2" fill="white" opacity="0.5"/>
+                <path d="M 85 160 L 100 170 L 115 160" fill="none" stroke="white" stroke-width="2" opacity="0.6"/>
+            </svg>`,
+            
+            path: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 40 160 Q 70 140 100 120 Q 130 100 160 80" fill="none" stroke="white" stroke-width="4" stroke-dasharray="8,4"/>
+                <path d="M 35 165 L 45 155" stroke="white" stroke-width="3" stroke-linecap="round"/>
+                <path d="M 155 85 L 165 75" stroke="white" stroke-width="3" stroke-linecap="round"/>
+                <circle cx="100" cy="50" r="20" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 100 35 L 100 50 L 110 55" stroke="white" stroke-width="2.5"/>
+                <circle cx="50" cy="150" r="5" fill="white" opacity="0.6"/>
+                <circle cx="150" cy="90" r="5" fill="white" opacity="0.6"/>
+            </svg>`,
+            
+            heart: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 100 150 Q 60 110 60 80 Q 60 50 85 50 Q 100 50 100 70 Q 100 50 115 50 Q 140 50 140 80 Q 140 110 100 150 Z" fill="none" stroke="white" stroke-width="3"/>
+                <circle cx="75" cy="75" r="3" fill="white"/>
+                <circle cx="125" cy="75" r="3" fill="white"/>
+                <path d="M 100 90 Q 90 100 100 110 Q 110 100 100 90" fill="white" opacity="0.7"/>
+            </svg>`,
+            
+            light: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="100" cy="100" r="25" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 100 50 L 100 70" stroke="white" stroke-width="3" stroke-linecap="round"/>
+                <path d="M 100 130 L 100 150" stroke="white" stroke-width="3" stroke-linecap="round"/>
+                <path d="M 50 100 L 70 100" stroke="white" stroke-width="3" stroke-linecap="round"/>
+                <path d="M 130 100 L 150 100" stroke="white" stroke-width="3" stroke-linecap="round"/>
+                <path d="M 65 65 L 78 78" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M 135 135 L 122 122" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M 135 65 L 122 78" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M 65 135 L 78 122" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>`,
+            
+            shepherd: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 60 80 Q 60 60 80 60 Q 100 60 100 80 L 100 140" fill="none" stroke="white" stroke-width="3"/>
+                <circle cx="100" cy="150" r="8" fill="white"/>
+                <path d="M 120 50 Q 140 50 150 70 Q 150 90 140 100" fill="none" stroke="white" stroke-width="3"/>
+                <circle cx="85" cy="75" r="2.5" fill="white"/>
+                <path d="M 75 85 Q 85 90 95 85" fill="none" stroke="white" stroke-width="2"/>
+                <ellipse cx="130" cy="120" rx="15" ry="20" fill="none" stroke="white" stroke-width="2.5"/>
+                <circle cx="125" cy="115" r="2" fill="white"/>
+            </svg>`,
+            
+            peace: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="100" cy="100" r="60" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 100 40 L 100 160" stroke="white" stroke-width="3"/>
+                <path d="M 100 100 L 65 135" stroke="white" stroke-width="3"/>
+                <path d="M 100 100 L 135 135" stroke="white" stroke-width="3"/>
+                <circle cx="100" cy="100" r="8" fill="white"/>
+            </svg>`,
+            
+            hope: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 100 160 L 100 80" stroke="white" stroke-width="4"/>
+                <path d="M 70 110 Q 70 80 100 80 Q 130 80 130 110" fill="none" stroke="white" stroke-width="3"/>
+                <circle cx="85" cy="95" r="4" fill="white"/>
+                <circle cx="115" cy="95" r="4" fill="white"/>
+                <path d="M 90 50 L 100 40 L 110 50 L 100 55 Z" fill="white"/>
+                <path d="M 85 165 L 100 175 L 115 165" fill="none" stroke="white" stroke-width="3"/>
+            </svg>`,
+            
+            victory: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 70 140 L 100 60 L 130 140" fill="none" stroke="white" stroke-width="4" stroke-linejoin="round"/>
+                <circle cx="100" cy="50" r="12" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 95 45 L 100 40 L 105 45" fill="white"/>
+                <path d="M 85 155 L 115 155" stroke="white" stroke-width="3"/>
+            </svg>`,
+            
+            word: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <rect x="60" y="50" width="80" height="100" fill="none" stroke="white" stroke-width="3" rx="3"/>
+                <path d="M 100 50 L 100 150" stroke="white" stroke-width="2" opacity="0.5"/>
+                <path d="M 75 80 L 125 80" stroke="white" stroke-width="2"/>
+                <path d="M 75 95 L 125 95" stroke="white" stroke-width="2"/>
+                <path d="M 75 110 L 125 110" stroke="white" stroke-width="2"/>
+                <path d="M 75 125 L 110 125" stroke="white" stroke-width="2"/>
+            </svg>`,
+            
+            prayer: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 80 120 L 80 80 Q 80 70 90 70 L 110 70 Q 120 70 120 80 L 120 120" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 80 120 Q 80 140 100 140 Q 120 140 120 120" fill="none" stroke="white" stroke-width="3"/>
+                <circle cx="85" cy="85" r="2.5" fill="white"/>
+                <circle cx="115" cy="85" r="2.5" fill="white"/>
+                <path d="M 100 50 L 100 70" stroke="white" stroke-width="2.5"/>
+                <path d="M 95 55 L 100 50 L 105 55" fill="none" stroke="white" stroke-width="2"/>
+            </svg>`,
+            
+            strength: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="100" cy="100" r="50" fill="none" stroke="white" stroke-width="4"/>
+                <path d="M 80 100 L 95 115 L 120 80" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="100" cy="100" r="35" fill="none" stroke="white" stroke-width="2" opacity="0.5"/>
+            </svg>`,
+            
+            wisdom: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="100" cy="80" r="30" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 100 110 L 100 160" stroke="white" stroke-width="3"/>
+                <path d="M 85 130 L 115 130" stroke="white" stroke-width="3"/>
+                <path d="M 80 160 L 120 160" stroke="white" stroke-width="3"/>
+                <circle cx="90" cy="75" r="3" fill="white"/>
+                <circle cx="110" cy="75" r="3" fill="white"/>
+                <path d="M 92 88 L 108 88" stroke="white" stroke-width="2"/>
+            </svg>`,
+            
+            faith: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 100 40 L 80 80 L 120 80 Z" fill="none" stroke="white" stroke-width="3"/>
+                <circle cx="100" cy="120" r="30" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 100 85 L 100 90" stroke="white" stroke-width="2.5"/>
+                <circle cx="100" cy="120" r="8" fill="white"/>
+                <path d="M 70 120 L 80 120" stroke="white" stroke-width="2" opacity="0.7"/>
+                <path d="M 120 120 L 130 120" stroke="white" stroke-width="2" opacity="0.7"/>
+            </svg>`,
+            
+            tree: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <rect x="90" y="120" width="20" height="40" fill="none" stroke="white" stroke-width="3"/>
+                <circle cx="100" cy="90" r="35" fill="none" stroke="white" stroke-width="3"/>
+                <circle cx="75" cy="100" r="25" fill="none" stroke="white" stroke-width="2.5" opacity="0.8"/>
+                <circle cx="125" cy="100" r="25" fill="none" stroke="white" stroke-width="2.5" opacity="0.8"/>
+                <circle cx="88" cy="85" r="3" fill="white"/>
+                <circle cx="112" cy="85" r="3" fill="white"/>
+            </svg>`,
+            
+            refuge: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 100 50 L 50 100 L 70 100 L 70 150 L 130 150 L 130 100 L 150 100 Z" fill="none" stroke="white" stroke-width="3" stroke-linejoin="round"/>
+                <rect x="90" y="120" width="20" height="30" fill="none" stroke="white" stroke-width="2.5"/>
+                <circle cx="95" cy="135" r="2" fill="white"/>
+                <rect x="75" y="110" width="15" height="15" fill="none" stroke="white" stroke-width="2"/>
+                <rect x="110" y="110" width="15" height="15" fill="none" stroke="white" stroke-width="2"/>
+            </svg>`,
+            
+            crown: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 60 120 L 70 80 L 85 100 L 100 70 L 115 100 L 130 80 L 140 120 Z" fill="none" stroke="white" stroke-width="3" stroke-linejoin="round"/>
+                <circle cx="70" cy="80" r="6" fill="white"/>
+                <circle cx="100" cy="70" r="6" fill="white"/>
+                <circle cx="130" cy="80" r="6" fill="white"/>
+                <path d="M 60 120 L 140 120" stroke="white" stroke-width="4"/>
+            </svg>`,
+            
+            armor: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 100 40 L 60 70 L 60 120 Q 60 150 100 160 Q 140 150 140 120 L 140 70 Z" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 100 40 L 100 160" stroke="white" stroke-width="2" opacity="0.6"/>
+                <path d="M 75 90 L 125 90" stroke="white" stroke-width="2.5"/>
+                <circle cx="100" cy="110" r="8" fill="none" stroke="white" stroke-width="2"/>
+                <path d="M 95 105 L 100 110 L 105 100" fill="none" stroke="white" stroke-width="2"/>
+            </svg>`,
+            
+            fruit: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="100" cy="110" r="40" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 100 70 Q 95 60 90 55" fill="none" stroke="white" stroke-width="2.5"/>
+                <path d="M 85 60 Q 95 65 100 70 Q 105 65 115 60" fill="none" stroke="white" stroke-width="2"/>
+                <circle cx="90" cy="105" r="3" fill="white" opacity="0.7"/>
+                <circle cx="110" cy="115" r="3" fill="white" opacity="0.7"/>
+                <circle cx="95" cy="125" r="2.5" fill="white" opacity="0.6"/>
+            </svg>`,
+            
+            gift: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <rect x="70" y="90" width="60" height="60" fill="none" stroke="white" stroke-width="3"/>
+                <rect x="60" y="80" width="80" height="15" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 100 80 L 100 150" stroke="white" stroke-width="3"/>
+                <path d="M 70 90 L 130 90" stroke="white" stroke-width="2.5"/>
+                <circle cx="85" cy="65" r="8" fill="none" stroke="white" stroke-width="2.5"/>
+                <circle cx="115" cy="65" r="8" fill="none" stroke="white" stroke-width="2.5"/>
+                <path d="M 85 73 Q 92 78 100 80" fill="none" stroke="white" stroke-width="2"/>
+                <path d="M 115 73 Q 108 78 100 80" fill="none" stroke="white" stroke-width="2"/>
+            </svg>`,
+            
+            fire: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 100 160 Q 80 140 80 115 Q 80 90 100 60 Q 120 90 120 115 Q 120 140 100 160 Z" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 100 130 Q 90 120 90 105 Q 90 90 100 75 Q 110 90 110 105 Q 110 120 100 130" fill="none" stroke="white" stroke-width="2.5" opacity="0.7"/>
+                <circle cx="100" cy="100" r="3" fill="white"/>
+            </svg>`,
+            
+            star: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 100 50 L 110 80 L 140 85 L 115 105 L 120 135 L 100 120 L 80 135 L 85 105 L 60 85 L 90 80 Z" fill="none" stroke="white" stroke-width="3" stroke-linejoin="round"/>
+                <circle cx="100" cy="95" r="8" fill="white" opacity="0.6"/>
+            </svg>`,
+            
+            water: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 60 120 Q 80 100 100 120 Q 120 140 140 120" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"/>
+                <path d="M 60 95 Q 80 75 100 95 Q 120 115 140 95" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+                <circle cx="75" cy="110" r="4" fill="white" opacity="0.5"/>
+                <circle cx="125" cy="110" r="4" fill="white" opacity="0.5"/>
+                <path d="M 100 140 Q 95 150 100 160 Q 105 150 100 140" fill="none" stroke="white" stroke-width="2.5"/>
+            </svg>`,
+            
+            trumpet: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 60 100 L 100 100 Q 140 100 160 80 Q 165 75 165 70 Q 165 65 160 60 Q 140 40 100 40 L 60 40 Z" fill="none" stroke="white" stroke-width="3"/>
+                <ellipse cx="60" cy="70" rx="8" ry="30" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 100 60 L 100 80" stroke="white" stroke-width="2"/>
+                <circle cx="120" cy="70" r="3" fill="white"/>
+            </svg>`,
+            
+            door: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <rect x="70" y="50" width="60" height="100" fill="none" stroke="white" stroke-width="3" rx="5"/>
+                <circle cx="115" cy="100" r="5" fill="white"/>
+                <rect x="85" y="70" width="30" height="25" fill="none" stroke="white" stroke-width="2"/>
+                <path d="M 70 50 L 100 30 L 130 50" fill="none" stroke="white" stroke-width="2.5"/>
+                <path d="M 60 150 L 140 150" stroke="white" stroke-width="3"/>
+            </svg>`,
+            
+            rock: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 60 140 L 70 90 L 90 70 L 110 80 L 130 70 L 140 100 L 135 140 Z" fill="none" stroke="white" stroke-width="3" stroke-linejoin="round"/>
+                <path d="M 80 120 L 90 100 L 110 105 L 120 120" fill="none" stroke="white" stroke-width="2" opacity="0.6"/>
+                <path d="M 50 140 L 150 140" stroke="white" stroke-width="4"/>
+            </svg>`,
+            
+            bread: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="100" cy="100" rx="50" ry="35" fill="none" stroke="white" stroke-width="3"/>
+                <ellipse cx="100" cy="95" rx="45" ry="30" fill="none" stroke="white" stroke-width="2" opacity="0.6"/>
+                <circle cx="85" cy="95" r="3" fill="white" opacity="0.7"/>
+                <circle cx="100" cy="100" r="3" fill="white" opacity="0.7"/>
+                <circle cx="115" cy="95" r="3" fill="white" opacity="0.7"/>
+            </svg>`,
+            
+            vine: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 100 160 Q 100 130 80 110 Q 60 90 60 60" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 100 120 Q 120 110 140 110 Q 150 110 150 100" fill="none" stroke="white" stroke-width="2.5"/>
+                <circle cx="60" cy="55" r="8" fill="none" stroke="white" stroke-width="2.5"/>
+                <circle cx="150" cy="95" r="6" fill="none" stroke="white" stroke-width="2"/>
+                <circle cx="75" cy="75" r="5" fill="white" opacity="0.7"/>
+                <circle cx="125" cy="105" r="4" fill="white" opacity="0.7"/>
+            </svg>`,
+            
+            temple: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 60 150 L 60 90 L 100 60 L 140 90 L 140 150" fill="none" stroke="white" stroke-width="3" stroke-linejoin="round"/>
+                <path d="M 50 150 L 150 150" stroke="white" stroke-width="4"/>
+                <path d="M 70 90 L 70 150" stroke="white" stroke-width="2.5" opacity="0.6"/>
+                <path d="M 100 90 L 100 150" stroke="white" stroke-width="2.5" opacity="0.6"/>
+                <path d="M 130 90 L 130 150" stroke="white" stroke-width="2.5" opacity="0.6"/>
+                <rect x="90" y="120" width="20" height="30" fill="none" stroke="white" stroke-width="2.5"/>
+            </svg>`,
+            
+            lamb: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="100" cy="100" rx="35" ry="30" fill="none" stroke="white" stroke-width="3"/>
+                <circle cx="70" cy="90" r="20" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 130 95 L 145 95 L 145 125 L 135 130" fill="none" stroke="white" stroke-width="2.5"/>
+                <path d="M 70 115 L 70 135" stroke="white" stroke-width="2.5"/>
+                <path d="M 100 115 L 100 135" stroke="white" stroke-width="2.5"/>
+                <circle cx="65" cy="85" r="2.5" fill="white"/>
+                <path d="M 60 92 Q 65 95 70 92" fill="none" stroke="white" stroke-width="2"/>
+            </svg>`,
+            
+            mountain: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 40 150 L 80 80 L 100 100 L 120 60 L 160 150" fill="none" stroke="white" stroke-width="3" stroke-linejoin="round"/>
+                <path d="M 30 150 L 170 150" stroke="white" stroke-width="3"/>
+                <path d="M 115 70 L 125 70" stroke="white" stroke-width="2" opacity="0.7"/>
+                <circle cx="120" cy="75" r="3" fill="white" opacity="0.8"/>
+            </svg>`,
+            
+            rainbow: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 50 130 Q 50 70 100 50 Q 150 70 150 130" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 60 130 Q 60 80 100 65 Q 140 80 140 130" fill="none" stroke="white" stroke-width="2.5" opacity="0.7"/>
+                <path d="M 70 130 Q 70 90 100 80 Q 130 90 130 130" fill="none" stroke="white" stroke-width="2" opacity="0.5"/>
+                <path d="M 40 130 L 160 130" stroke="white" stroke-width="3"/>
+            </svg>`,
+            
+            shield: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 100 40 L 60 60 L 60 100 Q 60 140 100 160 Q 140 140 140 100 L 140 60 Z" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 85 100 L 95 110 L 115 85" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>`,
+            
+            dove: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 60 100 Q 70 90 85 95 L 120 95 Q 125 95 130 90" fill="none" stroke="white" stroke-width="3"/>
+                <ellipse cx="100" cy="100" rx="20" ry="15" fill="none" stroke="white" stroke-width="2.5"/>
+                <circle cx="110" cy="97" r="2.5" fill="white"/>
+                <path d="M 60 100 Q 50 85 55 75 Q 60 85 65 95" fill="none" stroke="white" stroke-width="2.5"/>
+                <path d="M 130 90 Q 140 75 145 65 Q 140 75 135 85" fill="none" stroke="white" stroke-width="2.5"/>
+                <path d="M 100 112 L 95 125 L 100 120 L 105 125 Z" fill="none" stroke="white" stroke-width="2"/>
+            </svg>`,
+            
+            key: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="70" cy="100" r="25" fill="none" stroke="white" stroke-width="3"/>
+                <circle cx="70" cy="100" r="12" fill="none" stroke="white" stroke-width="2.5"/>
+                <path d="M 95 100 L 150 100" stroke="white" stroke-width="3"/>
+                <path d="M 130 90 L 130 100" stroke="white" stroke-width="3"/>
+                <path d="M 145 90 L 145 100" stroke="white" stroke-width="3"/>
+            </svg>`,
+            
+            scroll: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 70 60 Q 60 60 60 70 L 60 130 Q 60 140 70 140 L 130 140 Q 140 140 140 130 L 140 70 Q 140 60 130 60 Z" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 80 80 L 120 80" stroke="white" stroke-width="2"/>
+                <path d="M 80 95 L 120 95" stroke="white" stroke-width="2"/>
+                <path d="M 80 110 L 120 110" stroke="white" stroke-width="2"/>
+                <path d="M 80 125 L 105 125" stroke="white" stroke-width="2"/>
+                <circle cx="65" cy="65" r="3" fill="white"/>
+                <circle cx="135" cy="135" r="3" fill="white"/>
+            </svg>`,
+            
+            hand: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 100 150 L 100 90 M 80 110 L 80 70 Q 80 60 90 60 Q 100 60 100 70 L 100 90 M 100 70 Q 100 60 110 60 Q 120 60 120 70 L 120 110 M 100 90 L 100 80 Q 100 70 110 70 Q 115 70 115 75 L 115 110" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M 75 150 Q 75 155 80 155 L 120 155 Q 125 155 125 150 L 125 110 L 75 110 Z" fill="none" stroke="white" stroke-width="3"/>
+            </svg>`,
+            
+            wings: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 100 100 Q 70 80 50 90 Q 40 95 45 105 Q 60 110 100 100" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 100 100 Q 130 80 150 90 Q 160 95 155 105 Q 140 110 100 100" fill="none" stroke="white" stroke-width="3"/>
+                <circle cx="100" cy="100" r="8" fill="white"/>
+                <path d="M 95 90 L 100 85 L 105 90" fill="none" stroke="white" stroke-width="2"/>
+            </svg>`,
+            
+            fountain: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 100 140 Q 85 120 85 100 Q 85 80 100 60 Q 115 80 115 100 Q 115 120 100 140" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 75 110 Q 70 100 75 90" fill="none" stroke="white" stroke-width="2" opacity="0.7"/>
+                <path d="M 125 110 Q 130 100 125 90" fill="none" stroke="white" stroke-width="2" opacity="0.7"/>
+                <path d="M 60 145 L 140 145" stroke="white" stroke-width="3"/>
+                <circle cx="90" cy="95" r="2" fill="white" opacity="0.6"/>
+                <circle cx="110" cy="95" r="2" fill="white" opacity="0.6"/>
+            </svg>`,
+            
+            seal: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="100" cy="100" r="45" fill="none" stroke="white" stroke-width="3"/>
+                <circle cx="100" cy="100" r="30" fill="none" stroke="white" stroke-width="2.5"/>
+                <path d="M 100 70 L 100 100 L 115 115" stroke="white" stroke-width="3" stroke-linecap="round"/>
+                <circle cx="100" cy="100" r="5" fill="white"/>
+            </svg>`,
+            
+            cup: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 70 80 L 75 130 Q 75 145 100 145 Q 125 145 125 130 L 130 80 Z" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 65 80 L 135 80" stroke="white" stroke-width="3"/>
+                <path d="M 130 100 L 150 105 Q 160 105 160 95 Q 160 85 150 85 L 130 90" fill="none" stroke="white" stroke-width="2.5"/>
+                <path d="M 85 100 Q 90 95 100 95 Q 110 95 115 100" fill="none" stroke="white" stroke-width="2" opacity="0.6"/>
+            </svg>`,
+            
+            angel: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="100" cy="70" r="15" fill="none" stroke="white" stroke-width="3"/>
+                <path d="M 100 85 L 100 130" stroke="white" stroke-width="3"/>
+                <path d="M 100 95 L 80 110 M 100 95 L 120 110" stroke="white" stroke-width="3"/>
+                <path d="M 100 130 L 85 155 M 100 130 L 115 155" stroke="white" stroke-width="3"/>
+                <path d="M 70 90 Q 60 85 55 95 Q 60 100 75 95" fill="none" stroke="white" stroke-width="2.5"/>
+                <path d="M 130 90 Q 140 85 145 95 Q 140 100 125 95" fill="none" stroke="white" stroke-width="2.5"/>
+                <circle cx="100" cy="55" r="3" fill="white"/>
+            </svg>`
+        };
+
+        const verses = [
+            {num: 1, ref: "창 1:1", lines: ["태초에 하나님이", "천지를 창조하시니라"], illustration: "creation"},
+            {num: 2, ref: "계 22:21", lines: ["주 예수의 은혜가", "모든 자들에게 있을지어다", "아멘"], illustration: "grace"},
+            {num: 3, ref: "창 3:15", lines: ["내가 너로 여자와 원수가 되게 하고", "네 후손도 여자의 후손과 원수가 되게 하리니", "여자의 후손은 네 머리를 상하게 할 것이요", "너는 그의 발꿈치를 상하게 할 것이니라 하시고"], illustration: "serpent"},
+            {num: 4, ref: "사 53:5", lines: ["그가 찔림은 우리의 허물 때문이요", "그가 상함은 우리의 죄악 때문이라", "그가 징계를 받음으로 우리는 평화를 누리고", "그가 채찍에 맞음으로 우리는 나음을 받았도다"], illustration: "cross"},
+            {num: 5, ref: "요 14:6", lines: ["예수께서 이르시되", "내가 곧 길이요 진리요 생명이니", "나로 말미암지 않고는", "아버지께로 올 자가 없느니라"], illustration: "path"},
+            {num: 6, ref: "요 3:16", lines: ["하나님이 세상을 이처럼 사랑하사", "독생자를 주셨으니", "이는 그를 믿는 자마다 멸망하지 않고", "영생을 얻게 하려 하심이라"], illustration: "heart"},
+            {num: 7, ref: "요 1:1", lines: ["태초에 말씀이 계시니라", "이 말씀이 하나님과 함께 계셨으니", "이 말씀은 곧 하나님이시니라"], illustration: "word"},
+            {num: 8, ref: "요 1:14", lines: ["말씀이 육신이 되어", "우리 가운데 거하시매", "우리가 그의 영광을 보니", "아버지의 독생자의 영광이요", "은혜와 진리가 충만하더라"], illustration: "light"},
+            {num: 9, ref: "마 28:19-20", lines: ["그러므로 너희는 가서", "모든 민족을 제자로 삼아", "아버지와 아들과 성령의 이름으로 세례를 베풀고", "내가 너희에게 분부한 모든 것을 가르쳐 지키게 하라", "볼지어다 내가 세상 끝날까지 너희와 항상 함께 있으리라"], illustration: "path"},
+            {num: 10, ref: "롬 3:23", lines: ["모든 사람이 죄를 범하였으매", "하나님의 영광에 이르지 못하더니"], illustration: "cross"},
+            {num: 11, ref: "롬 5:8", lines: ["우리가 아직 죄인 되었을 때에", "그리스도께서 우리를 위하여 죽으심으로", "하나님께서 우리에게 대한", "자기의 사랑을 확증하셨느니라"], illustration: "heart"},
+            {num: 12, ref: "롬 6:23", lines: ["죄의 삯은 사망이요", "하나님의 은사는", "그리스도 예수 우리 주 안에 있는 영생이니라"], illustration: "gift"},
+            {num: 13, ref: "롬 8:1", lines: ["그러므로 이제", "그리스도 예수 안에 있는 자에게는", "결코 정죄함이 없나니"], illustration: "shield"},
+            {num: 14, ref: "롬 8:28", lines: ["우리가 알거니와", "하나님을 사랑하는 자 곧", "그의 뜻대로 부르심을 입은 자들에게는", "모든 것이 합력하여 선을 이루느니라"], illustration: "hope"},
+            {num: 15, ref: "롬 10:9-10", lines: ["네가 만일 네 입으로 예수를 주로 시인하며", "또 하나님께서 그를 죽은 자 가운데서", "살리신 것을 네 마음에 믿으면 구원을 받으리라", "사람이 마음으로 믿어 의에 이르고", "입으로 시인하여 구원에 이르느니라"], illustration: "faith"},
+            {num: 16, ref: "롬 12:1-2", lines: ["그러므로 형제들아", "내가 하나님의 모든 자비하심으로 너희를 권하노니", "너희 몸을 하나님이 기뻐하시는 거룩한 산 제물로 드리라", "이는 너희가 드릴 영적 예배니라", "너희는 이 세대를 본받지 말고", "오직 마음을 새롭게 함으로 변화를 받아", "하나님의 선하시고 기뻐하시고 온전하신 뜻이", "무엇인지 분별하도록 하라"], illustration: "fire"},
+            {num: 17, ref: "고전 10:13", lines: ["사람이 감당할 시험 밖에", "너희가 당한 것이 없나니", "오직 하나님은 미쁘사", "너희가 감당하지 못할 시험 당함을 허락하지 아니하시고", "시험 당할 즈음에 또한 피할 길을 내사", "너희로 능히 감당하게 하시느니라"], illustration: "strength"},
+            {num: 18, ref: "고전 15:3-4", lines: ["내가 받은 것을 먼저 너희에게 전하였노니", "이는 성경대로 그리스도께서", "우리 죄를 위하여 죽으시고", "장사 지낸 바 되셨다가", "성경대로 사흘 만에 다시 살아나사"], illustration: "victory"},
+            {num: 19, ref: "고후 5:17", lines: ["그런즉 누구든지 그리스도 안에 있으면", "새로운 피조물이라", "이전 것은 지나갔으니", "보라 새 것이 되었도다"], illustration: "creation"},
+            {num: 20, ref: "갈 2:20", lines: ["내가 그리스도와 함께 십자가에 못 박혔나니", "그런즉 이제는 내가 사는 것이 아니요", "오직 내 안에 그리스도께서 사시는 것이라", "이제 내가 육체 가운데 사는 것은", "나를 사랑하사 나를 위하여 자기 자신을 버리신", "하나님의 아들을 믿는 믿음 안에서 사는 것이라"], illustration: "cross"},
+            {num: 21, ref: "갈 5:22-23", lines: ["오직 성령의 열매는", "사랑과 희락과 화평과", "오래 참음과 자비와 양선과", "충성과 온유와 절제니", "이같은 것을 금지할 법이 없느니라"], illustration: "fruit"},
+            {num: 22, ref: "엡 2:8-9", lines: ["너희는 그 은혜에 의하여 믿음으로 말미암아 구원을 받았으니", "이것은 너희에게서 난 것이 아니요 하나님의 선물이라", "행위에서 난 것이 아니니", "이는 누구든지 자랑하지 못하게 함이라"], illustration: "gift"},
+            {num: 23, ref: "엡 6:10-11", lines: ["끝으로 너희가 주 안에서와", "그 힘의 능력으로 강건하여지고", "마귀의 간계를 능히 대적하기 위하여", "하나님의 전신갑주를 입으라"], illustration: "armor"},
+            {num: 24, ref: "빌 4:6-7", lines: ["아무 것도 염려하지 말고", "다만 모든 일에 기도와 간구로", "너희 구할 것을 감사함으로 하나님께 아뢰라", "그리하면 모든 지각에 뛰어난 하나님의 평강이", "그리스도 예수 안에서", "너희 마음과 생각을 지키시리라"], illustration: "peace"},
+            {num: 25, ref: "빌 4:13", lines: ["내게 능력 주시는 자 안에서", "내가 모든 것을 할 수 있느니라"], illustration: "strength"},
+            {num: 26, ref: "골 3:2", lines: ["위의 것을 생각하고", "땅의 것을 생각하지 말라"], illustration: "star"},
+            {num: 27, ref: "살전 5:16-18", lines: ["항상 기뻐하라", "쉬지 말고 기도하라", "범사에 감사하라", "이것이 그리스도 예수 안에서", "너희를 향하신 하나님의 뜻이니라"], illustration: "prayer"},
+            {num: 28, ref: "딤후 3:16-17", lines: ["모든 성경은 하나님의 감동으로 된 것으로", "교훈과 책망과 바르게 함과", "의로 교육하기에 유익하니", "이는 하나님의 사람으로 온전하게 하며", "모든 선한 일을 행할 능력을 갖추게 하려 함이라"], illustration: "scroll"},
+            {num: 29, ref: "히 11:1", lines: ["믿음은 바라는 것들의 실상이요", "보이지 않는 것들의 증거니"], illustration: "hope"},
+            {num: 30, ref: "히 13:5", lines: ["돈을 사랑하지 말고", "있는 바를 족한 줄로 알라", "그가 친히 말씀하시기를", "내가 결코 너희를 버리지 아니하고", "너희를 떠나지 아니하리라 하셨느니라"], illustration: "hand"},
+            {num: 31, ref: "약 1:2-3", lines: ["내 형제들아", "너희가 여러 가지 시험을 당하거든", "온전히 기쁘게 여기라", "이는 너희 믿음의 시련이", "인내를 만들어 내는 줄 너희가 앎이라"], illustration: "fire"},
+            {num: 32, ref: "약 4:7", lines: ["그런즉 너희는 하나님께 복종할지어다", "마귀를 대적하라", "그리하면 너희를 피하리라"], illustration: "shield"},
+            {num: 33, ref: "벧전 3:15", lines: ["너희 마음에 그리스도를 주로 삼아 거룩하게 하고", "너희 속에 있는 소망에 관한 이유를", "묻는 자에게는 대답할 것을 항상 준비하되", "온유와 두려움으로 하고"], illustration: "hope"},
+            {num: 34, ref: "벧전 5:7", lines: ["너희 염려를 다 주께 맡기라", "이는 그가 너희를 돌보심이라"], illustration: "shepherd"},
+            {num: 35, ref: "요일 1:9", lines: ["만일 우리가 우리 죄를 자백하면", "그는 미쁘시고 의로우사", "우리 죄를 사하시며", "우리를 모든 불의에서 깨끗하게 하실 것이요"], illustration: "water"},
+            {num: 36, ref: "요일 4:4", lines: ["자녀들아 너희는 하나님께 속하였고", "또 그들을 이기었나니", "이는 너희 안에 계신 이가", "세상에 있는 자보다 크심이라"], illustration: "victory"},
+            {num: 37, ref: "요일 5:11-12", lines: ["또 증거는 이것이니", "하나님이 우리에게 영생을 주신 것과", "이 생명이 그의 아들 안에 있는 그것이니라", "아들이 있는 자에게는 생명이 있고", "하나님의 아들이 없는 자에게는 생명이 없느니라"], illustration: "life"},
+            {num: 38, ref: "계 3:20", lines: ["볼지어다 내가 문 밖에 서서 두드리노니", "누구든지 내 음성을 듣고 문을 열면", "내가 그에게로 들어가", "그와 더불어 먹고", "그는 나와 더불어 먹으리라"], illustration: "door"},
+            {num: 39, ref: "시 23:1", lines: ["여호와는 나의 목자시니", "내게 부족함이 없으리로다"], illustration: "shepherd"},
+            {num: 40, ref: "시 46:1", lines: ["하나님은 우리의 피난처시요 힘이시니", "환난 중에 만날 큰 도움이시라"], illustration: "refuge"},
+            {num: 41, ref: "시 119:11", lines: ["내가 주께 범죄하지 아니하려 하여", "주의 말씀을 내 마음에 두었나이다"], illustration: "heart"},
+            {num: 42, ref: "잠 3:5-6", lines: ["너는 마음을 다하여 여호와를 신뢰하고", "네 명철을 의지하지 말라", "너는 범사에 그를 인정하라", "그리하면 네 길을 지도하시리라"], illustration: "path"},
+            {num: 43, ref: "사 40:31", lines: ["오직 여호와를 앙망하는 자는 새 힘을 얻으리니", "독수리가 날개치며 올라감 같을 것이요", "달음박질하여도 곤비하지 아니하겠고", "걸어가도 피곤하지 아니하리로다"], illustration: "wings"},
+            {num: 44, ref: "렘 29:11", lines: ["여호와의 말씀이니라", "너희를 향한 나의 생각을 내가 아나니", "평안이요 재앙이 아니니라", "너희에게 미래와 희망을 주는 것이니라"], illustration: "hope"}
+        ];
+
+        // 첫 글자들로 암기 문장 생성
+        function createMnemonic(lines) {
+            const firstChars = lines.map(line => line.charAt(0));
+            const mnemonic = firstChars.join('');
+            
+            let formatted = '';
+            for (let i = 0; i < mnemonic.length; i++) {
+                formatted += mnemonic[i];
+                if ((i + 1) % 3 === 0 && i < mnemonic.length - 1) {
+                    formatted += ' ';
+                }
+            }
+            
+            return `"${formatted}" 으로 기억하세요!`;
+        }
+
+        let currentSlide = 0;
+        let currentLine = 0;
+        
+        // 슬라이드 생성
+        function createSlides() {
+            const presentation = document.getElementById('presentation');
+            
+            verses.forEach((verse, index) => {
+                const bgClass = `bg-${(Math.floor(index / 9) % 5) + 1}`;
+                
+                // 가장 긴 줄 찾기
+                const maxLineLength = Math.max(...verse.lines.map(line => line.length));
+                let fontSize;
+                
+                if (maxLineLength < 15) fontSize = '48px';
+                else if (maxLineLength < 20) fontSize = '44px';
+                else if (maxLineLength < 25) fontSize = '38px';
+                else if (maxLineLength < 30) fontSize = '34px';
+                else if (maxLineLength < 35) fontSize = '30px';
+                else if (maxLineLength < 40) fontSize = '28px';
+                else if (maxLineLength < 45) fontSize = '26px';
+                else if (maxLineLength < 50) fontSize = '24px';
+                else if (maxLineLength < 55) fontSize = '22px';
+                else fontSize = '20px';
+                
+                // 줄이 많으면 폰트 크기 조정
+                if (verse.lines.length > 8) {
+                    fontSize = parseInt(fontSize) * 0.85 + 'px';
+                } else if (verse.lines.length > 6) {
+                    fontSize = parseInt(fontSize) * 0.9 + 'px';
+                }
+                
+                // ===== 첫 번째 슬라이드: 첫 글자 힌트 =====
+                const hintSlide = document.createElement('div');
+                hintSlide.className = `slide ${bgClass}`;
+                hintSlide.dataset.slideType = 'hint';
+                
+                // 슬라이드 번호
+                const slideNum1 = document.createElement('div');
+                slideNum1.className = 'slide-number';
+                slideNum1.textContent = `#${verse.num} 힌트 (${verse.lines.length}줄)`;
+                slideNum1.style.color = 'rgba(255,255,255,0.7)';
+                hintSlide.appendChild(slideNum1);
+                
+                // SVG 삽화 추가
+                const illustrationDiv = document.createElement('div');
+                illustrationDiv.className = 'illustration';
+                illustrationDiv.innerHTML = illustrations[verse.illustration] || illustrations.cross;
+                hintSlide.appendChild(illustrationDiv);
+                
+                // 성경 참조
+                const ref1 = document.createElement('div');
+                ref1.className = 'reference';
+                ref1.textContent = verse.ref;
+                hintSlide.appendChild(ref1);
+                
+                // 힌트 컨테이너
+                const hintContainer = document.createElement('div');
+                hintContainer.className = 'verse-container';
+                
+                // 각 줄의 첫 글자만 표시
+                verse.lines.forEach((line, lineIndex) => {
+                    const hintLine = document.createElement('div');
+                    hintLine.className = 'verse-line hint-line';
+                    hintLine.textContent = line.charAt(0) + '...';
+                    hintLine.style.fontSize = fontSize;
+                    hintLine.style.color = '#ffffff';
+                    hintLine.dataset.lineIndex = lineIndex;
+                    hintContainer.appendChild(hintLine);
+                });
+                
+                // 첫 글자들을 모아서 암기 문장 만들기
+                const mnemonicText = createMnemonic(verse.lines);
+                const mnemonicSentence = document.createElement('div');
+                mnemonicSentence.className = 'verse-line mnemonic-sentence';
+                mnemonicSentence.style.fontSize = '32px';
+                mnemonicSentence.style.color = '#FFD700';
+                mnemonicSentence.style.fontWeight = 'bold';
+                mnemonicSentence.style.marginTop = '30px';
+                mnemonicSentence.style.padding = '15px 30px';
+                mnemonicSentence.style.background = 'rgba(0,0,0,0.2)';
+                mnemonicSentence.style.borderRadius = '15px';
+                mnemonicSentence.textContent = `💡 ${mnemonicText}`;
+                mnemonicSentence.dataset.lineIndex = verse.lines.length;
+                hintContainer.appendChild(mnemonicSentence);
+                
+                hintSlide.appendChild(hintContainer);
+                presentation.appendChild(hintSlide);
+                
+                // ===== 두 번째 슬라이드: 전체 본문 =====
+                const fullSlide = document.createElement('div');
+                fullSlide.className = `slide ${bgClass}`;
+                fullSlide.dataset.slideType = 'full';
+                
+                // 슬라이드 번호
+                const slideNum2 = document.createElement('div');
+                slideNum2.className = 'slide-number';
+                slideNum2.textContent = `#${verse.num}`;
+                fullSlide.appendChild(slideNum2);
+                
+                // SVG 삽화 추가 (두 번째 슬라이드에도)
+                const illustrationDiv2 = document.createElement('div');
+                illustrationDiv2.className = 'illustration';
+                illustrationDiv2.innerHTML = illustrations[verse.illustration] || illustrations.cross;
+                fullSlide.appendChild(illustrationDiv2);
+                
+                // 성경 참조
+                const ref2 = document.createElement('div');
+                ref2.className = 'reference';
+                ref2.textContent = verse.ref;
+                fullSlide.appendChild(ref2);
+                
+                // 본문 컨테이너
+                const verseContainer = document.createElement('div');
+                verseContainer.className = 'verse-container';
+                
+                // 각 줄 생성
+                verse.lines.forEach((line, lineIndex) => {
+                    const verseLine = document.createElement('div');
+                    verseLine.className = 'verse-line';
+                    verseLine.textContent = line;
+                    verseLine.style.fontSize = fontSize;
+                    verseLine.style.color = '#ffffff';
+                    verseLine.dataset.lineIndex = lineIndex;
+                    verseContainer.appendChild(verseLine);
+                });
+                
+                fullSlide.appendChild(verseContainer);
+                presentation.appendChild(fullSlide);
+            });
+        }
+        
+        // 슬라이드 표시
+        function showSlide(n) {
+            const slides = document.querySelectorAll('.slide');
+            
+            if (n >= slides.length) {
+                currentSlide = slides.length - 1;
+            } else if (n < 0) {
+                currentSlide = 0;
+            } else {
+                currentSlide = n;
+            }
+            
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[currentSlide].classList.add('active');
+            
+            const lines = slides[currentSlide].querySelectorAll('.verse-line');
+            lines.forEach(line => {
+                line.classList.remove('show');
+            });
+            currentLine = -1;
+            
+            updateUI();
+        }
+        
+        // 다음 줄 또는 다음 슬라이드
+        function showNextLine() {
+            const slides = document.querySelectorAll('.slide');
+            const lines = slides[currentSlide].querySelectorAll('.verse-line');
+            
+            if (currentLine < lines.length - 1) {
+                currentLine++;
+                lines[currentLine].classList.add('show');
+            } else {
+                nextSlide();
+            }
+        }
+        
+        function nextSlide() {
+            showSlide(currentSlide + 1);
+        }
+        
+        function prevSlide() {
+            showSlide(currentSlide - 1);
+        }
+        
+        // UI 업데이트
+        function updateUI() {
+            const slides = document.querySelectorAll('.slide');
+            document.getElementById('slideCounter').textContent = `${currentSlide + 1} / ${slides.length}`;
+            document.getElementById('progressBar').style.width = `${((currentSlide + 1) / slides.length) * 100}%`;
+            
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === slides.length - 1;
+        }
+        
+        // 키보드 이벤트
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+                prevSlide();
+            } else if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                showNextLine();
+            }
+        });
+        
+        // 클릭 이벤트
+        document.querySelector('.presentation-container').addEventListener('click', (e) => {
+            if (!e.target.classList.contains('nav-button')) {
+                showNextLine();
+            }
+        });
+        
+        // 터치 스와이프 지원
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+        
+        const presentation = document.querySelector('.presentation-container');
+        
+        presentation.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+        
+        presentation.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe();
+        }, { passive: true });
+        
+        function handleSwipe() {
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            const minSwipeDistance = 50;
+            
+            // 가로 스와이프가 세로 스와이프보다 큰 경우
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+                if (deltaX > 0) {
+                    // 오른쪽 스와이프 - 이전 슬라이드
+                    prevSlide();
+                } else {
+                    // 왼쪽 스와이프 - 다음 슬라이드
+                    nextSlide();
+                }
+            }
+        }
+        
+        // 초기화
+        createSlides();
+        showSlide(0);
+        
+        // PWA Service Worker 등록
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker 등록 성공:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker 등록 실패:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
